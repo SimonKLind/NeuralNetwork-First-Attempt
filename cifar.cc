@@ -1,3 +1,6 @@
+/** This is just a file for handling the layers
+  * and loading the images */
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -6,6 +9,7 @@
 
 using namespace std;
 
+/** This stuff could probably be done nicer, but whatever... */
 string label[10];
 unsigned char labels1[10000];
 unsigned char *set1[10000];
@@ -22,7 +26,7 @@ unsigned char *test[10000];
 
 void getLabels(){
 	ifstream fin;
-	fin.open("cifar-10/batches.meta.txt");
+	fin.open("cifar-10/batches.meta.txt"); // This is just where it's located on my machine...
 	if(!fin){
 		cout << "ERROR: Label input" << endl;
 		return;
@@ -31,6 +35,7 @@ void getLabels(){
 	fin.close();
 }
 
+/** Gets data from file to passed label array */
 void getData(unsigned char *labels, unsigned char **inputs, string filename){
 	for(int i=0; i<10000; i++) inputs[i] = new unsigned char[3072]; 
 	ifstream fin;
@@ -57,6 +62,7 @@ void deleteData(){
 	}
 }
 
+/** Cycles through one set of images */
 void cycle(unsigned char *labels, unsigned char **inputs, Layer<unsigned char> &first, Layer<double> **layers, int numLayers){
 	double *res;
 	double loss = 0;
@@ -104,6 +110,10 @@ void cycle(unsigned char *labels, unsigned char **inputs, Layer<unsigned char> &
 	for(int i=0; i<numLayers; ++i) layers[i]->update();
 }
 
+/** Runs layers on test set
+  * Something in here seems to be wrong, 
+  * it always registers exactly 10% even when all train sets 
+  * registers higher of lower */
 void testNet(Layer<unsigned char> &first, Layer<double> **layers, int numLayers){
 	double max;
 	double *res;
@@ -142,6 +152,9 @@ int main(){
 	getData(labels4, set4, "data_batch_4.bin");
 	getData(labels5, set5, "data_batch_5.bin");
 	getData(testLabels, test, "test_batch.bin");
+	
+	/* Current layer setup:
+	 * ReLU -> BatchNorm -> ReLu -> BatchNorm -> Output -> BatchNorm -> softmax */
 	ReLU<unsigned char> u(3072, 100);
 	Layer<double> *layers[] = {
 		new BatchNorm(100),
@@ -153,6 +166,8 @@ int main(){
 		//new SVM(10)
 	};
 	int numLayers = 6;
+	
+	/* cycles layers through all train sets */
 	for(int i=0; i<2; ++i){
 		cycle(labels1, set1, u, layers, numLayers);
 		cycle(labels2, set2, u, layers, numLayers);
