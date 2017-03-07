@@ -1,3 +1,6 @@
+/** This header contains my implementations of some
+  * common layers used in neural networks */
+
 #ifndef LAYERS_H
 #define LAYERS_H
 
@@ -6,11 +9,15 @@
 #include <iostream>
 
 std::random_device rd;
-std::mt19937 rando(rd());
+std::mt19937 rando(rd()); // Mersenne twister for random weights
 
 const double LEARN_RATE = 10;
 const double REGULARIZATION_STRENGTH = 0.01;
 
+/** Layer interface
+  * Handles input and output width, and stores lates input
+  * for backward pass
+  * Templated to handle unsigned char directly from images */
 template <typename inType>
 class Layer{
 
@@ -23,7 +30,8 @@ public:
 	Layer(int inWidth, int outWidth): inW(inWidth), outW(outWidth){
 		latestIn = new double[inWidth];
 	}
-
+	
+	/** Takes input values and an optional boolean telling layer to free input memory */
 	virtual double* forward(inType *input, bool del = true) = 0;
 	virtual double* backward(double *grad) = 0;
 	virtual void update(){}
@@ -43,9 +51,11 @@ public:
 
 /* -------------------------------------------------------- */
 
+/** Batch norm layer
+  * Doesn't need to be templated, as it will never be first layer */
 class BatchNorm: public Layer<double>{
 
-	double mean;
+	double mean; // Keeps mean and variance
 	double variance;
 
 	double getVariance(){
@@ -58,6 +68,7 @@ public:
 
 	BatchNorm(int inWidth): Layer(inWidth, inWidth) {}
 
+	/** Forward pass */
 	double* forward(double *input, bool del = true){
 		//std::cout << "Going through BatchNorm: ";
 		mean = 0;
@@ -81,6 +92,9 @@ public:
 		return output;
 	}
 
+	/** Returns gradient for each input 
+	  * Altough the gradient is a total monster,
+	  * it has been tested and works */ 
 	double* backward(double *grad){
 		double iw = this->inW;
 		double *out = new double[this->inW];
@@ -96,6 +110,7 @@ public:
 
 /* -------------------------------------------------------- */
 
+/** Softmas loss function */
 class SoftMax: public Layer<double>{
 
 	double *exps;
@@ -133,6 +148,8 @@ public:
 		return output;
 	}
 
+	/** Backward pass 
+	  * Tested and works */
 	double* backward(double *grad){
 		grad = new double[this->inW];
 		for(int i=0; i<this->inW; i++){
@@ -152,6 +169,7 @@ public:
 
 /* -------------------------------------------------------- */
 
+/** SVM loss function */
 class SVM: public Layer<double>{
 
 	char *gradMult;
@@ -183,7 +201,10 @@ public:
 		if(del) delete[] input;
 		return out;
 	}
-
+	
+	/** Backward pass 
+	  * as I'm writing this comment i notice that this is wrong... 
+	  * TODO */
 	double* backward(double *grad){
 		grad = new double[this->inW];
 		for(int i=0; i<this->inW; ++i){
@@ -195,6 +216,8 @@ public:
 
 /* -------------------------------------------------------- */
 
+/** A sub-interface for layers that use weights 
+  * Handles weights and gradients */
 template <typename inType>
 class WeightLayer: public Layer<inType>{
 
@@ -220,6 +243,7 @@ public:
 	virtual double* forward(inType *input, bool del = true) = 0;
 	virtual double* backward(double *grad) = 0;
 
+	/** Performs gradient update */
 	void update(){
 		for(int i=0; i<this->outW; i++){
 			for(int j=0; j<this->inW; j++){
@@ -244,6 +268,7 @@ public:
 
 /* -------------------------------------------------------- */
 
+/** ReLU layer */
 template <typename inType>
 class ReLU: public WeightLayer<inType>{
 
@@ -281,6 +306,8 @@ public:
 		return output;
 	}
 
+	/** Backward pass
+	  * Not properly tested, but should be correct */
 	double* backward(double *grad){
 		//double currentGradients[this->outW][this->inW];
 		for(int i=0; i<this->outW; i++){ // Adding up gradients
@@ -309,6 +336,7 @@ public:
 
 /* -------------------------------------------------------- */
 
+/** Normal linear layer used for output to classify */
 class Output: public WeightLayer<double>{
 
 public:
@@ -333,6 +361,8 @@ public:
 		return output;
 	}
 
+	/** Backward pass
+	  * Not properly tested, but should be correct */
 	double* backward(double *grad){
 		for(int i=0; i<this->outW; i++){
 			//std::cout << grad[i] << ", ";
